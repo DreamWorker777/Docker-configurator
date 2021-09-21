@@ -1,10 +1,14 @@
 import React, { Component } from 'react';
+import Panel from '../components/Panel';
+import SideBar from '../components/SideBar';
+
 
 class Home extends Component {
   render() {
     return (
         <div>
-          <h2>Home</h2>
+          <Panel />
+          <SideBar />
         </div>
     );
   }

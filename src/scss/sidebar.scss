@@ -1,0 +1,14 @@
+.pro-sidebar {
+    min-width: 300px;
+    text-align: center;
+
+    .pro-menu {
+        .pro-menu-item {
+            font-size: 20px;
+            .pro-inner-list-item {
+                padding-left: 0px !important;
+                padding: 10px !important;
+            }
+        }
+    }
+}
