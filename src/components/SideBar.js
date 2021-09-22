@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
-import { ProSidebar, Menu, MenuItem, SubMenu } from 'react-pro-sidebar';
+import { ProSidebar, Menu, SubMenu } from 'react-pro-sidebar';
 import 'react-pro-sidebar/dist/css/styles.css';
 import '../scss/sidebar.scss';
 import { products } from '../constant/variable';
+import cubeStore from '../store/cubeStore';
 
 const s = {
   sideBarWrapper: {
@@ -19,7 +20,7 @@ const s = {
     position: 'relative',
     backgroundColor: '#66666669',
     marginBottom: 10,
-    borderRadius: 10
+    borderRadius: 10,
   },
   productImg: {
     width: '100%',
@@ -28,8 +29,26 @@ const s = {
 }
 
 const Product = ({ data }) => {
+  const productSelected = cubeStore(state => state.productSelected);
+  const updateProductSelected = cubeStore(state => state.updateProductSelected);
+
+  const selectProduct = (data) => {
+    if(  productSelected.id === data.id ) {
+      updateProductSelected( {} );
+      return;
+    }
+
+    updateProductSelected( data );
+  };
+
   return (
-    <div style={s.productWrapper}>
+    <div 
+      style={{ 
+        ...s.productWrapper, 
+        border: `${ data.id === productSelected.id ? 5 : 0 }px solid #ff0000`, 
+        padding: data.id === productSelected.id ? 5 : 10 }} 
+      onClick={ () => selectProduct(data) }>
+        
       <div>
         <img src={ data.menuImg } style={s.productImg} alt={data.name} />
       </div>

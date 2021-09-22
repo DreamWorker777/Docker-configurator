@@ -1,36 +1,33 @@
 import React, {useCallback, useState} from 'react';
-import { Stage, Graphics, Text } from '@inlet/react-pixi';
+import { Stage, Graphics, Text, Sprite, Container } from '@inlet/react-pixi';
 import Background from '../assets/back/back.jpg';
 import * as PIXI from 'pixi.js';
+import { stageProps, blockSize, dashDis, blockScale } from '../constant/variable';
+import { distance } from '../constant/method';
+import cubeStore from '../store/cubeStore';
+
+const s = {
+    wrapper: {
+        backgroundImage: `url(${Background})`,
+        backgroundSize: 'contain'
+    }
+}
 
 const Panel = () => {
     const [ gridNumbers, setGridNumbers ] = useState([]);
+    const [ mousePos, setMousePos ] = useState({ x: 0, y: 0 });
+    const [ isDragging, setIsDragging ] = useState(false);
+    const [ pendingCubes, setPendingCubes ] = useState([]);
+    const [ startPoint, setStartPoint ] = useState({ x: 0, y: 0 });
+    const [startCenter, setStartCenter] = useState( {} );
 
-    const stageProps = {
-        height: window.innerHeight - 5,
-        width: window.innerWidth - 5,
-        options: {
-            backgroundAlpha: 0,
-            antialias: true,
-        }
-    }
+    const centerPos = cubeStore(state => state.centerPos);
+    const updateCenterPos = cubeStore(state => state.updateCenterPos);
 
-    const centerPos = {
-        x: stageProps.width / 2 + 160,
-        y: stageProps.height / 2
-    }
+    const productSelected = cubeStore(state => state.productSelected);
 
-    const blockSize = 125
-    const dashDis = 5
-    
-    const s = {
-        wrapper: {
-            backgroundImage: `url(${Background})`,
-            backgroundSize: 'contain'
-        }
-    }
-
-    const distance = (p1, p2) => Math.sqrt( Math.pow( (p1.x - p2.x), 2 ) + Math.pow( (p1.y - p2.y), 2 ) );
+    const placedCubes = cubeStore(state => state.placedCubes);
+    const updatePlacedCubes = cubeStore(state => state.updatePlacedCubes);
 
     const drawDashLine = ( g, p1, p2 ) => {
         const len = Math.ceil(distance(p1, p2) / dashDis);
@@ -45,10 +42,12 @@ const Panel = () => {
         }
     }
 
-    const draw = useCallback(g => {
+    const drawLines = useCallback(g => {
+        const numArray = [];
+
         g.clear()
         g.lineStyle(1, 0xffffff, 1)
-        for( let i = 0; i < 20; i++ ) {
+        for( let i = 0; i < 10; i++ ) {
             drawDashLine( g, { x: 0, y: centerPos.y - i * blockSize }, { x: stageProps.width, y: centerPos.y - i * blockSize } );
             drawDashLine( g, { x: 0, y: centerPos.y + i * blockSize }, { x: stageProps.width, y: centerPos.y + i * blockSize } );
 
@@ -63,33 +62,231 @@ const Panel = () => {
                     { number: Math.floor( i / 2 ), x: centerPos.x + i * blockSize, y: 20 },
                 ]
 
-                setGridNumbers(prev => [...prev, ...data]);
+                numArray.push(...data);
             }
         }
-      }, [])
+        setGridNumbers(prev => [...numArray]);
+      }, [centerPos])
+
+    const drawOverLay = useCallback(g => {
+        const width = blockSize * productSelected.width;
+        const height = blockSize * productSelected.height;
+
+        g.clear();
+        g.beginFill(0x00ff14, 0.2);
+        g.drawRect(
+            calcSelectedPos(mousePos, 'x') - width / 2, 
+            calcSelectedPos(mousePos, 'y') - height / 2, 
+            width, 
+            height);
+        g.endFill();
+    })
+
+    const drawPendingOverLay = useCallback(g => {
+        if( !pendingCubes.length ) return;
+        const sizeX = blockSize * productSelected.width;
+        const sizeY = blockSize * productSelected.height;
+
+        const offsetX = pendingCubes[ pendingCubes.length - 1 ].x - pendingCubes[0].x;
+        const offsetY = pendingCubes[ pendingCubes.length - 1 ].y - pendingCubes[0].y;
+
+        const dirX = offsetX > 0 ? 1 : -1;
+        const dirY = offsetY > 0 ? 1 : -1;
+
+        const width = offsetX +  dirX * sizeX;
+        const height = offsetY + dirY * sizeY;
+
+        g.clear();
+        g.beginFill(0x00ff14, 0.2);
+        g.drawRect( 
+            pendingCubes[0].x - dirX * sizeX / 2, 
+            pendingCubes[0].y - dirY * sizeY / 2, 
+            width, 
+            height );
+        g.endFill();
+    })
+
+    const trackMousePos = ( event ) => {
+        const mouseX = event.clientX - event.target.offsetLeft;
+        const mouseY = event.clientY - event.target.offsetTop;
+
+        setMousePos({ x: mouseX, y: mouseY });
+
+        if( !productSelected.id && isDragging ) {
+            const offsetX = mouseX - startPoint.x;
+            const offsetY = mouseY - startPoint.y;
+            updateCenterPos({ x: startCenter.x + offsetX, y: startCenter.y + offsetY });
+        }
+
+        if( !isDragging || !productSelected.id )   return;
+
+        const sizeX = blockSize * productSelected.width;
+        const sizeY = blockSize * productSelected.height;
+
+        const startPosX = calcSelectedPos( startPoint, 'x' );
+        const startPosY = calcSelectedPos( startPoint, 'y' );
+
+        const currentPosX = calcSelectedPos({ x: mouseX, y: mouseY }, 'x');
+        const currentPosY = calcSelectedPos({ x: mouseX, y: mouseY }, 'y');
+
+        const rowCount = Math.abs((currentPosX - startPosX) / sizeX);
+        const colCount = Math.abs((currentPosY - startPosY) / sizeY);
+
+        const p_cubes = [];
+        for( let i = 0 ; i < rowCount + 1; i++ ) {
+            for( let j = 0; j < colCount + 1; j++ ) {
+                const directionX = (currentPosX - startPosX) > 0 ? 1 : -1;
+                const directionY = (currentPosY - startPosY) > 0 ? 1 : -1;
+
+                const cubeX = startPosX + directionX * sizeX * i;
+                const cubeY = startPosY + directionY * sizeY * j;
+
+                p_cubes.push({
+                    x: (cubeX - centerPos.x) / blockSize,
+                    y: (cubeY - centerPos.y) / blockSize,
+                    ...productSelected
+                });
+            }
+        }
+        setPendingCubes(prev => [ ...p_cubes ]);
+    }
+
+    const calcSelectedPos = (pos, axis) => {
+        const sizeX = blockSize * productSelected.width;
+        const sizeY = blockSize * productSelected.height;
+
+        if( !isDragging ) {
+            const numX = (pos.x - centerPos.x) / blockSize;
+            const numY = (pos.y - centerPos.y) / blockSize;
+            const x = centerPos.x + ((pos.x - centerPos.x ) >= 0 ? Math.floor( numX ) : Math.ceil( numX )) * blockSize + ((pos.x - centerPos.x ) > 0 ? sizeX / 2 : -sizeX / 2);
+            const y = centerPos.y + ((pos.y - centerPos.y ) >= 0 ? Math.floor( numY ) : Math.ceil( numY )) * blockSize + ((pos.y - centerPos.y ) > 0 ? sizeY / 2 : -sizeY / 2);
+    
+            return axis === 'x' ? x : y;
+        } else {
+            const numX = (pos.x - centerPos.x) / sizeX;
+            const numY = (pos.y - centerPos.y) / sizeY;
+            const x = centerPos.x + ((pos.x - centerPos.x ) >= 0 ? Math.floor( numX ) : Math.ceil( numX )) * sizeX + ((pos.x - centerPos.x ) > 0 ? sizeX / 2 : -sizeX / 2);
+            const y = centerPos.y + ((pos.y - centerPos.y ) >= 0 ? Math.floor( numY ) : Math.ceil( numY )) * sizeY + ((pos.y - centerPos.y ) > 0 ? sizeY / 2 : -sizeY / 2);
+    
+            return axis === 'x' ? x : y;
+        }
+    }
+
+    const startDragging = (event) => {
+        const position = {
+            x: event.clientX - event.target.offsetLeft,
+            y: event.clientY - event.target.offsetTop
+        };
+
+        setStartPoint(prev => ({ ...prev, ...position }));
+        setStartCenter( prev => ({ ...prev, ...centerPos }) )
+
+        setIsDragging(prev => !prev);
+
+        if( !productSelected.id ) {
+            return;
+        }
+
+        const cubeX= calcSelectedPos(position, 'x');
+        const cubeY= calcSelectedPos(position, 'y');
+
+        const p_cubes = [];
+        p_cubes.push({
+            x: (cubeX - centerPos.x) / blockSize,
+            y: (cubeY - centerPos.y) / blockSize,
+            ...productSelected
+        });
+
+        setPendingCubes(prev => [ ...p_cubes ]);
+    }
+
+    const endDragging = ( event ) => {
+        setIsDragging(prev => !prev);
+        
+        updatePlacedCubes( [ ...placedCubes, ...pendingCubes ] );
+
+        setPendingCubes([]);
+    }
 
     return (
         <div style={s.wrapper}>
-            <Stage { ...stageProps }>
-                <Graphics draw={draw} />
+            <Stage 
+                { ...stageProps } 
+                onMouseMove = { (e) => trackMousePos(e) } 
+                onMouseDown = { (e) => startDragging(e) }
+                onMouseUp = { (e) => endDragging(e) }
+                >
+                <Graphics draw={drawLines} />
                 { gridNumbers.map((num, index) => (
                     <Text
-                    key={index}
-                    text={num.number + 'm'}
-                    anchor={0.5}
-                    x={num.x}
-                    y={num.y}
-                    style={
-                      new PIXI.TextStyle({
-                        align: 'center',
-                        fontFamily: '"Source Sans Pro", Helvetica, sans-serif',
-                        fontSize: 15,
-                        fontWeight: 400,
-                        fill: ['#ff6600'], // gradient
-                      })
-                    }
-                  />
+                        key={index}
+                        text={num.number + 'm'}
+                        anchor={0.5}
+                        x={num.x}
+                        y={num.y}
+                        style={
+                        new PIXI.TextStyle({
+                            align: 'center',
+                            fontFamily: '"Source Sans Pro", Helvetica, sans-serif',
+                            fontSize: 15,
+                            fontWeight: 400,
+                            fill: ['#ff6600'], // gradient
+                        })
+                        }
+                    />
                 )) }
+                {
+                    placedCubes.map((cube, index) => (
+                        <Sprite
+                            key={index}
+                            image={ cube.drawImg }
+                            scale={{ x: blockScale.x, y: blockScale.y }}
+                            anchor={0.5}
+                            width={ blockSize * cube.width }
+                            height={ blockSize * cube.height }
+                            x={ centerPos.x + blockSize * cube.x }
+                            y={ centerPos.y + blockSize * cube.y }
+                        />
+                    ))
+                }
+                {
+                    productSelected.id ? ( 
+                        <Container>
+                            <Sprite
+                                image={ productSelected.drawImg }
+                                scale={{ x: blockScale.x, y: blockScale.y }}
+                                anchor={0.5}
+                                width={ blockSize * productSelected.width }
+                                height={ blockSize * productSelected.height }
+                                x={ calcSelectedPos(mousePos, 'x') }
+                                y={ calcSelectedPos(mousePos, 'y') }
+                                alpha={0.5}
+                            />
+                            <Graphics draw={drawOverLay} />
+                        </Container>
+                    ) : null
+                }
+                {
+                    isDragging && productSelected.id ? (
+                        <Container>
+                            { pendingCubes.map((cube, index) => (
+                                <Sprite
+                                    key={index}
+                                    image={ productSelected.drawImg }
+                                    scale={{ x: blockScale.x, y: blockScale.y }}
+                                    anchor={0.5}
+                                    width={ blockSize * productSelected.width }
+                                    height={ blockSize * productSelected.height }
+                                    x={ centerPos.x + blockSize * cube.x }
+                                    y={ centerPos.y + blockSize * cube.y }
+                                    alpha={0.5}
+                                />
+                            )) }
+                            
+                            <Graphics draw={drawPendingOverLay} />
+                        </Container>
+                    ) : null
+                }
             </Stage>
         </div>
     )
