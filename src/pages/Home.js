@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
+
 import Panel from '../components/Panel';
 import SideBar from '../components/SideBar';
-
+import Buttons from '../components/Buttons';
 
 class Home extends Component {
   render() {
@@ -9,6 +10,7 @@ class Home extends Component {
         <div>
           <Panel />
           <SideBar />
+          <Buttons />
         </div>
     );
   }

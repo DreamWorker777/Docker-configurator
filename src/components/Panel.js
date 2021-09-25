@@ -2,7 +2,7 @@ import React, {useCallback, useState} from 'react';
 import { Stage, Graphics, Text, Sprite, Container } from '@inlet/react-pixi';
 import Background from '../assets/back/back.jpg';
 import * as PIXI from 'pixi.js';
-import { stageProps, blockSize, dashDis, blockScale } from '../constant/variable';
+import { stageProps, dashDis } from '../constant/variable';
 import { distance } from '../constant/method';
 import cubeStore from '../store/cubeStore';
 
@@ -29,7 +29,19 @@ const Panel = () => {
     const placedCubes = cubeStore(state => state.placedCubes);
     const updatePlacedCubes = cubeStore(state => state.updatePlacedCubes);
 
+    const blockSize = cubeStore( state => state.blkSize );
+
+    const deleteMode = cubeStore( state => state.deleteActive );
+
+    const historyArray = cubeStore(state => state.historyArray);
+    const updateHistoryArray = cubeStore(state => state.updateHistoryArray);
+
     const drawDashLine = ( g, p1, p2 ) => {
+        g.lineStyle(1, 0xffffff, 0.3);
+        g.moveTo( p1.x, p1.y );
+        g.lineTo( p2.x, p2.y );
+        return;
+
         const len = Math.ceil(distance(p1, p2) / dashDis);
         
         const xOffset = (p2.x - p1.x) / len;
@@ -47,26 +59,33 @@ const Panel = () => {
 
         g.clear()
         g.lineStyle(1, 0xffffff, 1)
-        for( let i = 0; i < 10; i++ ) {
-            drawDashLine( g, { x: 0, y: centerPos.y - i * blockSize }, { x: stageProps.width, y: centerPos.y - i * blockSize } );
-            drawDashLine( g, { x: 0, y: centerPos.y + i * blockSize }, { x: stageProps.width, y: centerPos.y + i * blockSize } );
-
-            drawDashLine( g, { x: centerPos.x - i * blockSize, y: 0 }, { x: centerPos.x - i * blockSize, y: stageProps.height } );
-            drawDashLine( g, { x: centerPos.x + i * blockSize, y: 0 }, { x: centerPos.x + i * blockSize, y: stageProps.height } );
-
-            if( i % 2 === 0 ) {
-                const data = [
-                    { number: Math.floor( - i / 2), x: 325, y: centerPos.y - i * blockSize },
-                    { number: Math.floor( i / 2 ), x: 325, y: centerPos.y + i * blockSize },
-                    { number: Math.floor( - i / 2 ), x: centerPos.x - i * blockSize, y: 20 },
-                    { number: Math.floor( i / 2 ), x: centerPos.x + i * blockSize, y: 20 },
-                ]
-
-                numArray.push(...data);
+        for( let i = 0; i < 100; i++ ) {
+            const data = [];
+            if( centerPos.y - i * blockSize < stageProps.height  && centerPos.y - i * blockSize > 0) {
+                drawDashLine( g, { x: 0, y: centerPos.y - i * blockSize }, { x: stageProps.width, y: centerPos.y - i * blockSize } );
+                if( i % 2 === 0 )
+                    data.push({ number: Math.floor( - i / 2), x: 325, y: centerPos.y - i * blockSize });
             }
+            if( centerPos.y + i * blockSize < stageProps.height  && centerPos.y + i * blockSize > 0) {
+                drawDashLine( g, { x: 0, y: centerPos.y + i * blockSize }, { x: stageProps.width, y: centerPos.y + i * blockSize } );
+                if( i % 2 === 0 )
+                    data.push({ number: Math.floor( i / 2 ), x: 325, y: centerPos.y + i * blockSize });
+            }
+            if( centerPos.x - i * blockSize < stageProps.width && centerPos.x - i * blockSize > 0 ) {
+                drawDashLine( g, { x: centerPos.x - i * blockSize, y: 0 }, { x: centerPos.x - i * blockSize, y: stageProps.height } );
+                if( i % 2 === 0 )
+                    data.push({ number: Math.floor( - i / 2 ), x: centerPos.x - i * blockSize, y: 20 });
+            }
+            if( centerPos.x + i * blockSize < stageProps.width && centerPos.x + i * blockSize > 0 ) {
+                drawDashLine( g, { x: centerPos.x + i * blockSize, y: 0 }, { x: centerPos.x + i * blockSize, y: stageProps.height } );
+                if( i % 2 === 0 )
+                    data.push({ number: Math.floor( i / 2 ), x: centerPos.x + i * blockSize, y: 20 });
+            }
+
+            numArray.push(...data);
         }
         setGridNumbers(prev => [...numArray]);
-      }, [centerPos])
+      }, [centerPos, blockSize])
 
     const drawOverLay = useCallback(g => {
         const width = blockSize * productSelected.width;
@@ -82,25 +101,32 @@ const Panel = () => {
         g.endFill();
     })
 
+    const absolutePos = (val, axis) => {
+        if( axis === 'x' )
+            return centerPos.x + blockSize * val;
+        
+        return centerPos.y + blockSize * val;
+    }
+
     const drawPendingOverLay = useCallback(g => {
         if( !pendingCubes.length ) return;
         const sizeX = blockSize * productSelected.width;
         const sizeY = blockSize * productSelected.height;
 
-        const offsetX = pendingCubes[ pendingCubes.length - 1 ].x - pendingCubes[0].x;
-        const offsetY = pendingCubes[ pendingCubes.length - 1 ].y - pendingCubes[0].y;
+        const offsetX = absolutePos(pendingCubes[ pendingCubes.length - 1 ].x, 'x') - absolutePos(pendingCubes[0].x, 'x');
+        const offsetY = absolutePos(pendingCubes[ pendingCubes.length - 1 ].y, 'y') - absolutePos(pendingCubes[0].y, 'y');
 
         const dirX = offsetX > 0 ? 1 : -1;
         const dirY = offsetY > 0 ? 1 : -1;
 
-        const width = offsetX +  dirX * sizeX;
+        const width = offsetX + dirX * sizeX;
         const height = offsetY + dirY * sizeY;
 
         g.clear();
         g.beginFill(0x00ff14, 0.2);
         g.drawRect( 
-            pendingCubes[0].x - dirX * sizeX / 2, 
-            pendingCubes[0].y - dirY * sizeY / 2, 
+            absolutePos(pendingCubes[0].x, 'x') - dirX * sizeX / 2, 
+            absolutePos(pendingCubes[0].y, 'y') - dirY * sizeY / 2, 
             width, 
             height );
         g.endFill();
@@ -203,9 +229,26 @@ const Panel = () => {
     const endDragging = ( event ) => {
         setIsDragging(prev => !prev);
         
-        updatePlacedCubes( [ ...placedCubes, ...pendingCubes ] );
+        const tempCubes = placedCubes.filter((cube) => {
+            const res = pendingCubes.findIndex((item) => {
+                return item.x === cube.x && item.y === cube.y
+            });
+            return res === -1;
+        });
+        updateHistoryArray([ ...historyArray, placedCubes ]);
+
+        updatePlacedCubes( [ ...tempCubes, ...pendingCubes ] );
 
         setPendingCubes([]);
+    }
+
+    const removeCube = (index) => {
+        updateHistoryArray([ ...historyArray, placedCubes ]);
+
+        const temp = [ ...placedCubes ];
+        temp.splice( index, 1 );
+
+        updatePlacedCubes( [ ...temp ] );
     }
 
     return (
@@ -237,16 +280,34 @@ const Panel = () => {
                 )) }
                 {
                     placedCubes.map((cube, index) => (
-                        <Sprite
+                        <Container
                             key={index}
-                            image={ cube.drawImg }
-                            scale={{ x: blockScale.x, y: blockScale.y }}
-                            anchor={0.5}
-                            width={ blockSize * cube.width }
-                            height={ blockSize * cube.height }
-                            x={ centerPos.x + blockSize * cube.x }
-                            y={ centerPos.y + blockSize * cube.y }
-                        />
+                        >
+                            <Sprite
+                                image={ cube.drawImg }
+                                scale={{ x: 1, y: 1 }}
+                                anchor={0.5}
+                                width={ blockSize * cube.width * cube.scaleX }
+                                height={ blockSize * cube.height * cube.scaleY }
+                                x={ centerPos.x + blockSize * cube.x }
+                                y={ centerPos.y + blockSize * cube.y }
+                            />
+                            {
+                                deleteMode ? (
+                                    <Sprite 
+                                        image= { 'assets/img/products/close.png' }
+                                        scale={{ x: 1, y: 1 }}
+                                        anchor = {0.5}
+                                        width={ blockSize / 3 }
+                                        height={ blockSize / 3 }
+                                        x={ centerPos.x + blockSize * cube.x }
+                                        y={ centerPos.y + blockSize * cube.y }
+                                        interactive={true}
+                                        pointerdown={() => removeCube( index )}
+                                    />
+                                ) : null
+                            }
+                        </Container>
                     ))
                 }
                 {
@@ -254,10 +315,10 @@ const Panel = () => {
                         <Container>
                             <Sprite
                                 image={ productSelected.drawImg }
-                                scale={{ x: blockScale.x, y: blockScale.y }}
+                                scale={{ x: 1, y: 1 }}
                                 anchor={0.5}
-                                width={ blockSize * productSelected.width }
-                                height={ blockSize * productSelected.height }
+                                width={ blockSize * productSelected.width * productSelected.scaleX }
+                                height={ blockSize * productSelected.height * productSelected.scaleY }
                                 x={ calcSelectedPos(mousePos, 'x') }
                                 y={ calcSelectedPos(mousePos, 'y') }
                                 alpha={0.5}
@@ -273,10 +334,10 @@ const Panel = () => {
                                 <Sprite
                                     key={index}
                                     image={ productSelected.drawImg }
-                                    scale={{ x: blockScale.x, y: blockScale.y }}
+                                    scale={{ x: 1, y: 1 }}
                                     anchor={0.5}
-                                    width={ blockSize * productSelected.width }
-                                    height={ blockSize * productSelected.height }
+                                    width={ blockSize * productSelected.width * productSelected.scaleX }
+                                    height={ blockSize * productSelected.height * productSelected.scaleY }
                                     x={ centerPos.x + blockSize * cube.x }
                                     y={ centerPos.y + blockSize * cube.y }
                                     alpha={0.5}

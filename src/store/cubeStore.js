@@ -1,4 +1,4 @@
-import create from "zustand"
+import create from "zustand";
 import produce from "immer";
 import { stageProps } from "../constant/variable";
 
@@ -19,6 +19,21 @@ const cubeStore = create(set => ({
     placedCubes: [],
     updatePlacedCubes: ( cubes ) => set(produce(state => {
         state.placedCubes = [ ...cubes ]
+    })),
+
+    blkSize: 125,
+    updateBlockSize: ( val ) => set(produce(state => {
+        state.blkSize = val
+    })),
+
+    deleteActive: false,
+    updateDeleteActive: (val) => set(produce(state => {
+        state.deleteActive = val
+    })),
+
+    historyArray: [],
+    updateHistoryArray: (val) => set(produce(state => {
+        state.historyArray = [ ...val ];
     })),
 }))
 

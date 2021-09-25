@@ -15,7 +15,6 @@ const s = {
     paddingBottom: 10
   },
   productWrapper: {
-    height: 250,
     padding: 10,
     position: 'relative',
     backgroundColor: '#66666669',
@@ -23,14 +22,15 @@ const s = {
     borderRadius: 10,
   },
   productImg: {
-    width: '100%',
-    height: 215
+    width: '100%'
   }
 }
 
 const Product = ({ data }) => {
   const productSelected = cubeStore(state => state.productSelected);
   const updateProductSelected = cubeStore(state => state.updateProductSelected);
+
+  const updateDeleteMode = cubeStore( state => state.updateDeleteActive );
 
   const selectProduct = (data) => {
     if(  productSelected.id === data.id ) {
@@ -39,6 +39,8 @@ const Product = ({ data }) => {
     }
 
     updateProductSelected( data );
+
+    updateDeleteMode( false );
   };
 
   return (
@@ -52,7 +54,7 @@ const Product = ({ data }) => {
       <div>
         <img src={ data.menuImg } style={s.productImg} alt={data.name} />
       </div>
-
+      
       <div>
         {data.name}
       </div>
@@ -74,7 +76,7 @@ class SideBar extends Component {
                         <Product key={index} data={product} />
                       ))
                     }
-                  </SubMenu>                  
+                  </SubMenu>
                 ))
               }
             </Menu>
