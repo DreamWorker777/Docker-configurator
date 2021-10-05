@@ -18,7 +18,17 @@ const cubeStore = create(set => ({
 
     placedCubes: [],
     updatePlacedCubes: ( cubes ) => set(produce(state => {
-        state.placedCubes = [ ...cubes ]
+        state.placedCubes = cubes.sort((a, b) => {
+            const sumA = a.x + a.y;
+            const sumB = b.x + b.y;
+
+            if( sumA > sumB )
+                return 1;
+            else if( sumA === sumB )
+                return 0;
+            else
+                return -1;
+        })
     })),
 
     blkSize: 125,
@@ -35,6 +45,11 @@ const cubeStore = create(set => ({
     updateHistoryArray: (val) => set(produce(state => {
         state.historyArray = [ ...val ];
     })),
+
+    view3D: false,
+    updateView3D: (val) => set(produce(state => {
+        state.view3D = val;
+    }))
 }))
 
 export default cubeStore

@@ -65,6 +65,7 @@ const products = {
             name: 'test',
             menuImg: '/assets/img/products/pont01.png',
             drawImg: '/assets/img/products/pont01.png',
+            threeImg: '/assets/img/products/3d_pro.png',
             width: 1,
             height: 1,
             scaleX: 1.22,
@@ -75,7 +76,7 @@ const products = {
 
 const stageProps = {
     height: window.innerHeight - 5,
-    width: window.innerWidth - 5,
+    width: window.innerWidth,
     options: {
         backgroundAlpha: 0,
         antialias: true,

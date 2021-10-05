@@ -1,6 +1,7 @@
 {
   "name": "dockconfigurator",
-  "homepage": "http://qbgate.com/dockconfigurator",
+  "homepage": "https://qatarbusinessgate.com/",
+  "version": "0.1.0",
   "private": true,
   "dependencies": {
     "@inlet/react-pixi": "^6.6.5",

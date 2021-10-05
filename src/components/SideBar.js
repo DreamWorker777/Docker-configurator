@@ -62,28 +62,28 @@ const Product = ({ data }) => {
   )
 }
 
-class SideBar extends Component {
-  render() {
-    return (
-        <div style={ s.sideBarWrapper }>
-          <ProSidebar toggled={true}>
-            <Menu iconShape="square">
-              {
-                Object.keys( products ).map((key, index) => (
-                  <SubMenu key={index} defaultOpen={ index === 0 ? true: false } title={ key }>
-                    {
-                      products[key].map((product, index) => (
-                        <Product key={index} data={product} />
-                      ))
-                    }
-                  </SubMenu>
-                ))
-              }
-            </Menu>
-          </ProSidebar>
-        </div>
-    );
-  }
+const SideBar = () => {
+  const view3D = cubeStore(state => state.view3D);
+
+  return  !view3D ? (
+      <div style={ s.sideBarWrapper }>
+        <ProSidebar toggled={true}>
+          <Menu iconShape="square">
+            {
+              Object.keys( products ).map((key, index) => (
+                <SubMenu key={index} defaultOpen={ index === 0 ? true: false } title={ key }>
+                  {
+                    products[key].map((product, index) => (
+                      <Product key={index} data={product} />
+                    ))
+                  }
+                </SubMenu>
+              ))
+            }
+          </Menu>
+        </ProSidebar>
+      </div>
+  ) : null
 }
 
 export default SideBar;

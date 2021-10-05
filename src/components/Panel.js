@@ -9,7 +9,9 @@ import cubeStore from '../store/cubeStore';
 const s = {
     wrapper: {
         backgroundImage: `url(${Background})`,
-        backgroundSize: 'contain'
+        backgroundSize: 'contain',
+        width: 'calc(100vw)',
+        height: 'calc(100vh)'
     }
 }
 
@@ -36,6 +38,9 @@ const Panel = () => {
     const historyArray = cubeStore(state => state.historyArray);
     const updateHistoryArray = cubeStore(state => state.updateHistoryArray);
 
+    const view3D = cubeStore(state => state.view3D);
+    const updateView3D = cubeStore(state => state.updateView3D);
+
     const drawDashLine = ( g, p1, p2 ) => {
         g.lineStyle(1, 0xffffff, 0.3);
         g.moveTo( p1.x, p1.y );
@@ -58,6 +63,9 @@ const Panel = () => {
         const numArray = [];
 
         g.clear()
+
+        if( view3D ) return;
+
         g.lineStyle(1, 0xffffff, 1)
         for( let i = 0; i < 100; i++ ) {
             const data = [];
@@ -85,7 +93,7 @@ const Panel = () => {
             numArray.push(...data);
         }
         setGridNumbers(prev => [...numArray]);
-      }, [centerPos, blockSize])
+      }, [centerPos, blockSize, view3D])
 
     const drawOverLay = useCallback(g => {
         const width = blockSize * productSelected.width;
@@ -251,6 +259,19 @@ const Panel = () => {
         updatePlacedCubes( [ ...temp ] );
     }
 
+    const calc3DPos = (cube, axis) => {
+        const t_x = centerPos.x + blockSize * ( + 0.54 * ( cube.x + 0.5 ) )
+        const t_y = centerPos.y + blockSize * ( + 0.4 * ( cube.x + 0.5 ) )
+
+        const x = t_x + blockSize * ( - 0.74 * (cube.y + 0.5) )
+        const y = t_y + blockSize * ( + 0.29 * (cube.y + 0.5) )
+
+        if( axis === 'x' )
+            return x;
+        else
+            return y;
+    }
+
     return (
         <div style={s.wrapper}>
             <Stage 
@@ -260,7 +281,7 @@ const Panel = () => {
                 onMouseUp = { (e) => endDragging(e) }
                 >
                 <Graphics draw={drawLines} />
-                { gridNumbers.map((num, index) => (
+                {  !view3D ? gridNumbers.map((num, index) => (
                     <Text
                         key={index}
                         text={num.number + 'm'}
@@ -277,21 +298,36 @@ const Panel = () => {
                         })
                         }
                     />
-                )) }
+                )): null }
                 {
                     placedCubes.map((cube, index) => (
                         <Container
                             key={index}
                         >
-                            <Sprite
-                                image={ cube.drawImg }
-                                scale={{ x: 1, y: 1 }}
-                                anchor={0.5}
-                                width={ blockSize * cube.width * cube.scaleX }
-                                height={ blockSize * cube.height * cube.scaleY }
-                                x={ centerPos.x + blockSize * cube.x }
-                                y={ centerPos.y + blockSize * cube.y }
-                            />
+                            {
+                                !view3D ? (
+                                    <Sprite
+                                        image={ cube.drawImg }
+                                        scale={{ x: 1, y: 1 }}
+                                        anchor={0.5}
+                                        width={ blockSize * cube.width * cube.scaleX }
+                                        height={ blockSize * cube.height * cube.scaleY }
+                                        x={ centerPos.x + blockSize * cube.x }
+                                        y={ centerPos.y + blockSize * cube.y }
+                                    />
+                                ): (
+                                    <Sprite
+                                        image={ cube.threeImg }
+                                        scale={{ x: 1, y: 1 }}
+                                        anchor={0.5}
+                                        width={ blockSize * cube.width * 4 * 1.33242 }
+                                        height={ blockSize * cube.height * 4 }
+                                        x={ calc3DPos(cube, 'x') }
+                                        y={ calc3DPos(cube, 'y') }
+                                    />
+                                )
+                            }
+
                             {
                                 deleteMode ? (
                                     <Sprite 
