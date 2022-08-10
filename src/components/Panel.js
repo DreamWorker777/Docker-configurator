@@ -1,6 +1,6 @@
 import React, {useCallback, useState} from 'react';
 import { Stage, Graphics, Text, Sprite, Container } from '@inlet/react-pixi';
-import Background from '../assets/back/back.jpg';
+import Background from '../assets/back/back.png';
 import * as PIXI from 'pixi.js';
 import { stageProps, dashDis } from '../constant/variable';
 import { distance } from '../constant/method';

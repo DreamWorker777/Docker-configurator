@@ -14,6 +14,21 @@ const s = {
     buttonBack: {
         backgroundColor: '#123123'
     },
+    element: {
+        display: 'flex',
+        margin: 10
+    },
+    element_img: {
+        margin: 10,
+        width: 100,
+    },
+    element_title: {
+        marginLeft: 20,
+    },
+    element_count: {
+        marginLeft: 20,
+        fontSize: 21,
+    }
 }
 
 const Buttons = () => {
@@ -38,6 +53,7 @@ const Buttons = () => {
 
     const [modalShow, setModalShow] = useState(false);
     const [pinPoints, setPinPoints] = useState([]);
+    const [elements, setElements] = useState([]);
 
     const zoomInAction = () => {
         updateProductSelected({});
@@ -107,6 +123,19 @@ const Buttons = () => {
         });
 
         setPinPoints( pin_points );
+
+        console.log(placedCubes);
+        const temp = [];
+        placedCubes.forEach((cube) => {
+            const idx = temp.findIndex((item) => item.id === cube.id);
+            if( idx === -1 ) {
+                temp.push({ id: cube.id, title: cube.name, img: cube.menuImg, count: 1 });
+            } else {
+                temp[idx].count ++;
+            }
+        })
+        setElements(temp);
+
         handleShow();
     }
 
@@ -140,11 +169,31 @@ const Buttons = () => {
                 <Button variant="primary"  style={ s.buttonBack } onClick={ view3DAction }>3D View</Button>
             </ButtonGroup>
 
-            <Modal show={modalShow} onHide={handleClose} aria-labelledby="contained-modal-title-vcenter" centered>
+            <Modal 
+                show={modalShow} 
+                fullscreen={true}
+                onHide={handleClose} 
+            >
                 <Modal.Header closeButton>
                 <Modal.Title>Attention!</Modal.Title>
                 </Modal.Header>
-                <Modal.Body>Number of pins that required: { pinPoints.length } </Modal.Body>
+                <Modal.Body>
+                    Number of pins that required: { pinPoints.length } 
+                    <h3 style={{ margin: 20 }}> All Elements here: </h3>
+                    {
+                        elements.map((element, index) => (
+                            <div key={index} style={ s.element }>
+                                <img src={ element.img } style={ s.element_img } />
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                    <h4 style={ s.element_title }> { element.title } </h4>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                    <span style={ s.element_count }> { element.count } qty </span>
+                                </div>
+                            </div>
+                        ))
+                    }
+                </Modal.Body>
                 <Modal.Footer>
                 <Button variant="secondary" onClick={handleClose}>
                     Close
